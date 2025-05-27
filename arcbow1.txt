@@ -1,0 +1,2363 @@
+ChatGPT(gpt-4.1/General)> recall the skipgram algorithm
+<shell-maker-end-of-prompt>
+Certainly! The **skip-gram algorithm** is part of the word2vec family of models, popularized by Mikolov et al. at Google in 2013. Its primary goal is to learn word vector representations such that words with similar contexts have similar vectors.
+
+---
+
+## Outline of the Skip-gram Algorithm
+
+### Intuitive Description
+
+Given a target word in a sentence, the skip-gram model tries to predict the words that are likely to appear in the neighborhood (context) of the target word.
+
+- **Input:** Target word (center word)
+- **Output:** Probabilities for context words (neighbors)
+
+### Example
+
+Given the sentence:
+```
+The quick brown fox jumps over the lazy dog
+```
+For the center word `fox` and window size 2, the context words are `quick`, `brown`, `jumps`, `over`.
+
+---
+
+## Formal Algorithm
+
+Suppose the training data is a sequence of words \( w_1, w_2, ..., w_T \).
+
+**For each position \( t \) in the sequence:**
+
+- The center word: \( w_t \)
+- The context window: [ \( w_{t-c}, ..., w_{t-1}, w_{t+1}, ..., w_{t+c} \) ] (where \( c \) is the window size)
+
+The objective is to maximize the average log probability:
+
+\[
+\frac{1}{T} \sum_{t=1}^T \sum_{-c \leq j \leq c, j \neq 0} \log p(w_{t+j} | w_t)
+\]
+
+---
+
+### Model Architecture
+
+- Input: One-hot encoding of the center word
+- Two sets of embeddings (input and output)
+- Output: Softmax over vocabulary to predict probabilities of context words
+
+### Probability Estimation
+
+\[
+p(w_O | w_I) = \frac{\exp \left( v'_{w_O}^\top v_{w_I} \right)}{\sum_{w=1}^{|V|} \exp \left( v'_{w}^\top v_{w_I} \right)}
+\]
+
+Where:
+- \( w_I \): input (center) word
+- \( w_O \): output (context) word
+- \( v \) and \( v' \): input and outputembedding vectors
+
+---
+
+### Pseudocode
+
+```python
+for each word_index, center_word in enumerate(corpus):
+    for context_pos in range(-window, window + 1):
+        if context_pos == 0:
+            continue
+        context_index = word_index + context_pos
+        if context_index < 0 or context_index >= len(corpus):
+            continue
+        context_word = corpus[context_index]
+        # update weights to maximize p(context_word | center_word)
+```
+
+---
+
+## Training Tricks
+
+- **Negative sampling**: Instead of softmax over entire vocab, sample a few "negative" examples.
+- **Subsampling frequent words**: To speed up training and improve embedding quality.
+- **Hierarchical softmax**: An alternative to full softmax.
+
+---
+
+## Resources
+
+- [Mikolov et al., "Efficient Estimation of Word Representations in Vector Space", 2013](https://arxiv.org/abs/1301.3781)
+- [word2vec Explained](https://arxiv.org/abs/1402.3722)
+
+---
+
+## Summary Table
+
+|  | Skip-gram |
+|--|-----------|
+| Input | Center word |
+| Output | Context words |
+| Objective | Predict context given center |
+| Complexity | Efficient with negative sampling/hierarchical softmax |
+| Key Usage | Learning word embeddings |
+
+Let me know if you'd like full code or more details!
+
+ChatGPT(gpt-4.1/General)> recall the cbow algorithm
+<shell-maker-end-of-prompt>
+Absolutely! The **CBOW (Continuous Bag of Words)** algorithm is the counterpart to skip-gram in the word2vec family. While skip-gram predicts context words from a center word, CBOW does the reverse: **it predicts the center word given the context**.
+
+---
+
+## CBOW: High-Level Overview
+
+- **Input:** Context words (surrounding the target/center word)
+- **Output:** Probability distribution over vocabulary for the center word
+
+### Example Sentence
+
+Given:
+```
+The quick brown fox jumps over the lazy dog
+```
+
+For window size 2, if the center word is `fox`, the context words are `quick`, `brown`, `jumps`, `over`.  
+CBOW tries to predict `fox` using these context words.
+
+---
+
+## Formal Algorithm
+
+Given a sequence \( w_1, w_2, ..., w_T \):
+
+At each position \( t \):
+- Center word: \( w_t \)
+- Context window: \( [w_{t-c}, \dots, w_{t-1}, w_{t+1}, \dots, w_{t+c}] \), where \( c \) is the window size
+
+The objective is to maximize the log probability:
+
+\[
+\frac{1}{T} \sum_{t=1}^T \log p(w_t \mid w_{t-c}, \dots, w_{t-1}, w_{t+1}, \dots, w_{t+c})
+\]
+
+---
+
+### Model Architecture
+
+ - **Input Layer:** One-hot vectors for all context words (typically summed or averaged)
+- **Hidden Layer:** Embedding representation
+- **Output Layer:** Softmax over the vocabulary for predicting the center word
+
+### Probability Estimation
+
+Given input context words \( w_{t+j} \), \( j \in [-c, c],\ j\ne 0 \):
+
+- Compute the average context vector:
+
+\[
+v = \frac{1}{2c} \sum_{-c \leq j \leq c, j \neq 0} v_{w_{t+j}}
+\]
+
+- Probability for the center word \( w_t \):
+
+\[
+p(w_t \mid context) = \frac{\exp ( {v'}_{w_t}^\top v )}{\sum_{w=1}^{|V|} \exp ( {v'}_w^\top v )}
+\]
+
+Where:
+  - \( v_{w_{t+j}} \) is the embedding of a context word
+  - \( {v'}_{w} \) is the output vector for word \( w \)
+
+---
+
+### Pseudocode
+
+```python
+for each word_index, center_word in enumerate(corpus):
+    context_indices = [
+        i for i in range(word_index - window, word_index + window + 1)
+        if i != word_index and 0 <= i < len(corpus)
+    ]
+    context_words = [corpus[i] for i in context_indices]
+    context_vector = average([embedding[word] for word in context_words])
+    # update weights to maximize p(center_word | context_vector)
+```
+
+---
+
+### Training Tricks
+
+- **Negative sampling**: Reduces computational overhead of softmax.
+- **Subsampling frequent words**: Downshifts impact of very common words.
+- **Hierarchical softmax**: Alternative for faster training with large vocabularies.
+
+---
+
+## Comparison Table
+
+|                 | Skip-gram          | CBOW                 |
+|-----------------|-------------------|----------------------|
+| Input           | Center word       | Context words        |
+| Output          | Context words     | Center word          |
+| Favors          | Rare word accuracy| Frequent word speed  |
+| Typical usage   | Small data        | Large data           |
+
+---
+
+## References
+
+- [Mikolov et al., "Efficient Estimation of Word Representations in Vector Space", 2013](https://arxiv.org/abs/1301.3781)
+- [Word2vec Explained (arXiv:1402.3722)](https://arxiv.org/abs/1402.3722)
+
+---
+
+If you need a full CBOW implementation or more in-depth mathematical derivation, let me know!
+
+ChatGPT(gpt-4.1/General)> sketch the training loop of the autoregressive cbow algorithm in mit/gnu scheme
+<shell-maker-end-of-prompt>
+Certainly! Here’s a **sketch of the training loop** for the **autoregressive CBOW algorithm** in **MIT/GNU Scheme**.  
+You’ll see the core data movement and algorithmic steps, modularized for clarity.
+
+Assumptions:
+- `corpus`: a vector of word indices (`(vector 12 45 101 2 ...)`)
+- `window`: context window size (integer)
+- `embedding-matrix`: a mutable matrix holding word embeddings
+- `output-matrix`: a mutable matrix for output weights
+- `vocab-size`, `embedding-size`: obvious :)
+- `learning-rate`: used in updates
+- Helper functions: `(lookup-embedding word)`, `(update-embeddings context target)`, `(softmax ...)`, etc.
+
+We’ll focus on **one training step**, i.e., given all context words, predict the center word and update weights via gradient descent.
+
+```scheme
+;; MIT/GNU Scheme
+(define (train-autoregressive-cbow corpus window embedding-matrix output-matrix learning-rate epochs)
+  (let ((corpus-length (vector-length corpus)))
+    (do ((epoch 0 (+ epoch 1)))
+        ((>= epoch epochs))
+      ;; Loop over corpus
+      (do ((i window (+ i 1)))
+          ((>= i (- corpus-length window)))
+        (let* ((context-ids
+                ;; Get indices of context words before and after the center
+                (append
+                 (vector->list (vector-copy corpus (- i window) i))
+                 (vector->list (vector-copy corpus (+ i 1) (+ i window 1)))))
+               (center-id (vector-ref corpus i))
+               ;; Compute context embedding (average of embeddings)
+               (context-embeddings
+                (map (lambda (wid)
+                       (lookup-embedding embedding-matrix wid))
+                     context-ids))
+               (context-mean
+                (average-vectors context-embeddings))
+               ;; Predict probability distribution over vocab
+               (output-scores
+            (matrix-mul output-matrix context-mean))
+               (pred-probs
+                (softmax output-scores)))
+          ;; Compute loss and gradients, then update weights
+          (let ((loss (cross-entropy-loss pred-probs center-id)))
+            (let ((grads (compute-grads context-mean center-id pred-probs)))
+              (update-output-matrix! output-matrix grads learning-rate))
+            (update-embedding-matrix! embedding-matrix context-ids grads learning-rate)))
+        ))))
+```
+
+### Key Points
+
+- **`context-ids`**: collects indices of context words (excluding the center)
+- **`context-embeddings`**: gathers their embeddings
+- **`context-mean`**: averages context embeddings
+- **`output-scores`**: obtains scores by multiplying with output matrix
+- **`softmax`/`cross-entropy-loss`**: standard neural net components (to be defined elsewhere)
+- **Updates**: apply gradients to both the output and embedding matrices
+
+### Minimal helper signatures:
+```scheme
+(define (lookup-embedding embedding-matrix word-id) ...)
+(define (average-vectors vector-list) ...)
+(define (matrix-mul matrix vector) ...)
+(define (softmax scores) ...)
+(define (cross-entropy-loss probs target-id) ...)
+(define (compute-grads context-mean center-id pred-probs) ...)
+(define (update-output-matrix! output-matrix grads lr) ...)
+(define (update-embedding-matrix! embedding-matrix context-ids grads lr) ...)
+```
+
+This is a **sketch**: real implementation requires fleshing out `matrix-mul`, `softmax`, updating only relevant rows in the embeddings, batching, etc.
+
+---
+
+If you're interested in a more worked-out implementation (for a small vocab), or want to see code for the **helper functions**, just ask!
+
+ChatGPT(gpt-4.1/General)> add subsampling of frequent words from the corpus
+<shell-maker-end-of-prompt>
+Certainly! Subsampling of frequent words helps to reduce the effect of high-frequency (often less meaningful) words (like "the", "of", etc.) during training. The typical approach — as in the original word2vec papers — is:
+
+Given word \( w_i \) with frequency \( f(w_i) \), subsample it with probability:
+
+\[
+P(\text{keep}\ w_i) = \min\left(1, \sqrt{\frac{t}{f(w_i)}} + \frac{t}{f(w_i)}\right)
+\]
+where \( t \) is a small threshold (e.g., \(10^{-5}\)), and \( f(w_i) \) is the normalized frequency.
+
+---
+
+Below is a sketch incorporating **subsampling** into the previous CBOW training loop in MIT/GNU Scheme.
+
+---
+
+```scheme
+;; Helper: Compute word frequencies from the corpus
+(define (compute-frequencies corpus vocab-size)
+  (let ((counts (make-vector vocab-size 0))
+        (total (vector-length corpus)))
+    (vector-for-each (lambda (wid)
+                       (vector-set! counts wid (+ 1 (vector-ref counts wid))))
+                     corpus)
+    (map (lambda (cnt) (/ cnt total))
+         (vector->list counts))))
+
+;; Compute the keep probability for each word
+(define (compute-keep-probsfreqs t)
+  (map (lambda (f)
+         (min 1.0 (+ (sqrt (/ t f)) (/ t f))))
+       freqs))
+
+;; Subsampling function: returns a filtered copy of corpus vector
+(define (subsample-corpus corpus keep-probs)
+  (list->vector
+   (filter (lambda (wid)
+             (> (random-real) (- 1 (list-ref keep-probs wid))))
+           (vector->list corpus))))
+
+;; Main training function with subsampling
+(define (train-autoregressive-cbow-subsample corpus window embedding-matrix output-matrix learning-rate epochs vocab-size t)
+  (let* ((freqs (compute-frequencies corpus vocab-size))
+         (keep-probs (compute-keep-probs freqs t)))
+    (do ((epoch 0 (+ epoch 1)))
+        ((>= epoch epochs))
+      (let ((filtered-corpus (subsample-corpus corpus keep-probs))
+            (corpus-length (vector-length corpus)))
+        ;; training loop as before, but use filtered-corpus
+        (do ((i window (+ i 1)))
+            ((>= i (- (vector-length filtered-corpus) window)))
+          (let* ((context-ids
+                  (append
+                   (vector->list (vector-copy filtered-corpus (- i window) i))
+                   (vector->list (vector-copy filtered-corpus (+ i 1) (+ i window 1)))))
+                 (center-id (vector-ref filtered-corpus i))
+                 (context-embeddings (map (lambda (wid)
+                                            (lookup-embedding embedding-matrix wid))
+                                          context-ids))
+                 (context-mean (average-vectors context-embeddings))
+                 (output-scores (matrix-mul output-matrix context-mean))
+                 (pred-probs (softmax output-scores)))
+            (let ((loss (cross-entropy-loss pred-probs center-id)))
+              (let ((grads (compute-grads context-mean center-id pred-probs)))
+                (update-output-matrix! output-matrix grads learning-rate))
+              (update-embedding-matrix! embedding-matrix context-ids grads learning-rate))))))))
+
+```
+
+---
+
+### Key changes:
+1. Compute per-token frequencies and keep-probabilities.
+2. Each epoch, subsample the corpus.
+3. Train as before, but using the subsampled token stream.
+
+---
+
+#### Minimal helper for random numbers (if needed):
+
+```scheme
+(define (random-real) (/ (random 1000000) 1000000.0)) ; returns between 0 and 1
+```
+
+---
+
+**Notes:**
+- This is illustrative: extreme low-frequency words can get underrepresented, so a minimum threshold is sometimes applied.
+- The logic follows the typical word2vec subsampling heuristic.
+
+---
+
+Let me know if you want more detailed helper functions or more explanation!
+
+ChatGPT(gpt-4.1/General)> implement negative sampling for loss computation
+<shell-maker-end-of-prompt>
+Absolutely! Here’s a **Scheme sketch of CBOW with negative sampling** (instead of full softmax/cross-entropy), focused on implementing the loss and weight updates for the autoregressive CBOW as before.
+
+---
+
+### **Negative Sampling Overview** (for reference)
+- For each real (target) center word, sample \( k \) "negative" words (usually from a unigram distribution).
+- For each context–center pair:
+  - **Maximize** \( \log \sigma(v'_{center}^\top v_{context}) \)
+  - For \( k \) negatives \( w_{neg} \): **Minimize** \( \log \sigma(-v'_{neg}^\top v_{context}) \)
+- \( \sigma(x) \) is the sigmoid.
+
+---
+
+## **Schematic Implementation**
+
+Assume you have these helpers:
+- `(sample-negatives vocab-size center-id k)` — samples \( k \) negative word indices (not equal to `center-id`)
+- `(sigmoid x)` — numerically stable sigmoid
+- `(dot u v)` — dot-product
+- `(vector-scalar-add! v x alpha)` or similar, to update vectors in-place
+- `(lookup-embedding matrix word-id)`
+- `(update-embedding! matrix word-id grad-vector lr)`
+
+Only key steps are spelled out; batching, context-windowing, etc. are kept as before.
+
+---
+
+```scheme
+(define (train-autoregressive-cbow-neg-sample corpus window embedding-matrix output-matrix learning-rate epochs vocab-size k)
+  (let ((corpus-length (vector-length corpus)))
+    (do ((epoch 0 (+ epoch 1)))
+        ((>= epoch epochs))
+      (do ((i window (+ i 1)))
+          ((>= i (- corpus-length window)))
+        (let* ((context-ids
+                (append
+                 (vector->list (vector-copy corpus (- i window) i))
+                 (vector->list (vector-copy corpus (+ i 1) (+ i window 1)))))
+               (center-id (vector-ref corpus i))
+               ;; Compute averaged context embedding
+               (context-embeddings
+                (map (lambda (wid) (lookup-embedding embedding-matrix wid))
+                     context-ids))
+               (context-mean
+                (average-vectors context-embeddings)))
+
+          ;; === Negative sampling step ===
+          (let* ((neg-ids (sample-negatives vocab-size center-id k))
+                 ;; Get vectors
+                 (target-vector (lookup-embedding output-matrix center-id))
+ (neg-vectors (map (lambda (wid) (lookup-embedding output-matrix wid)) neg-ids))
+
+                 ;; Compute dot products and sigmoids
+                 (pos-dot (dot target-vector context-mean))
+                 (pos-sig (sigmoid pos-dot))
+
+                 (neg-dots (map (lambda (neg) (dot neg context-mean)) neg-vectors))
+                 (neg-sigs (map (lambda (d) (sigmoid (- d))) neg-dots))
+
+                 ;; Loss is -log(sigmoid(pos-dot)) - sum log(sigmoid(-neg-dots))
+                 (loss (- (+ (- (log pos-sig))
+                             (apply + (map (lambda (s) (- (log s))) neg-sigs)))))
+                 ;; Compute gradients for context mean
+                 (grad-context (vector-sub
+                                 (vector-scale target-vector (- 1 pos-sig))
+                                 (apply vector-add
+                                        (map (lambda (neg sig)
+                                               (vector-scale neg (- sig 1)))
+                                             neg-vectors
+                                             neg-sigs)))))
+            ;; === Weight updates ===
+
+            ;; For all context words, update embedding to push toward grad-context
+            (for-each
+              (lambda (wid)
+                (update-embedding! embedding-matrix wid grad-context learning-rate))
+              context-ids)
+
+            ;; Update output vector for (center) positive sample
+            (update-embedding! output-matrix center-id (vector-scale context-mean (- 1 pos-sig)) learning-rate)
+
+            ;; Update output vectors for negative samples
+            (for-each2
+              (lambda (neg-id neg-vector neg-sig)
+                (update-embedding! output-matrix neg-id (vector-scale context-mean (- neg-sig 1)) learning-rate))
+              neg-ids neg-vectors neg-sigs)
+            ))))))
+```
+
+---
+
+### **Helper Explanations/Signatures**
+
+Minimal helpers you'll need:
+```scheme
+(define (sample-negatives vocab-size center-id k) ...) ; returns list of k word-ids ≠ center-id
+
+;; Vector operations, assuming vectors as lists or array/srfi-4 vectors:
+(define (dot u v) ...)
+(define (vector-add . vectors) ...)
+(define (vector-sub u v) ...)
+(define (vector-scale v alpha) ...)
+(define (average-vectors vlist) ...)
+(define (update-embedding! matrix word-id grad-vector lr) 
+  ;; update matrix[word-id] += lr * grad-vector
+  ...)
+
+(define (sigmoid x) (/ 1.0 (+ 1.0 (exp (- x)))))
+;; for-each2 applies fun to each element in all given lists (like Python's zip)
+(define (for-each2 fun l1 l2 l3)
+  (let loop ((l1 l1) (l2 l2) (l3 l3))
+    (if (null? l1) 'done
+        (begin
+          (fun (car l1) (car l2) (car l3))
+          (loop (cdr l1) (cdr l2) (cdr l3))))))
+
+```
+
+---
+
+### **Comments**
+- The key change: loss/updates are now based on **sigmoid** for center and negative samples, instead of softmax over vocabulary.
+- Gradients and updates are made for only a few vectors per step (output and context), not the full vocab.
+- *Negative sampling* reduces computation, improves scalability.
+
+---
+
+Let me know if you want clarification on any specific helpers or want fleshed-out code for any of the primitives!
+
+ChatGPT(gpt-4.1/General)> what's left for the cbow implementation compatible with fasttext?
+<shell-maker-end-of-prompt>
+To make the **CBOW implementation compatible with fastText**, there are a few essential additions and changes. Here’s a checklist and explanation:
+
+---
+
+## ✅ Already Addressed
+
+- CBOW core loop (context to center prediction)
+- Windowing
+- Negative sampling
+- Subsampling of frequent words
+- Optimization stubs
+
+---
+
+## ⏳ What’s Missing To Be Compatible With fastText
+
+**fastText key innovation:**  
+**fastText** represents each word as the sum of its word and subword (character n-gram) embeddings. This enables:
+- OOV (out-of-vocabulary) word handling via subword n-grams
+- Better representations for morphologically rich languages or rare words
+
+### 1. **Subword Representation (N-grams)**
+- For each word, generate a set of character n-grams (including word boundaries).
+    - For example, the word `"where"` with 3-gram: `"<wh"`, `"whe"`, `"her"`, `"ere"`, `"re>"`.
+- For each subword (n-gram), have a distinct embedding vector (shared for all words containing it).
+- The **word embedding** is computed as the sum or average of its n-gram embeddings (+ an optional dedicated word vector).
+
+### 2. **Vocabulary and Lookup**
+- You need a mapping from n-grams to n-gram vectors.
+- When looking up a word, you must compose its embedding dynamically from its n-grams.
+
+### 3. **Learning and Updates**
+- During training, when you update a word embedding, you have to update the constituent n-gram embeddings.
+- Negative sampling and all train/update logic work on the composed n-gram embeddings.
+
+### 4. **Efficient Storage & Hashing**
+- Since there are many possible character n-grams in a language, fastText stores a fixed-size hash-table for their embeddings.
+    - Each n-gram is mapped (by a hash function) to a limited number of vectors.
+
+### 5. **Word Boundaries and Minimum/Maximum N-gram Length**
+- Start/end markers (`<`, `>`)
+- Configurable min/max n-gram lengths (defaults: min=3, max=6)
+
+---
+
+## 📝 Pseudocode-level Steps To Add (to your existing CBOW code)
+
+### (a) **Preprocessing: Collect possible n-grams per word**
+```scheme
+(define (word-ngrams word min-n max-n)
+  ;; Returns a list of n-grams for word, including word boundaries
+  (let ((w (string-append "<" word ">")))
+    (apply append
+           (map (lambda (n)
+                  (let loop ((i 0) (lst '()))
+                    (if (<= (+ i n) (string-length w))
+                        (loop (+ i 1)
+                              (cons (substring w i (+ i n)) lst))
+                        lst)))
+                (iota (- (+ 1 max-n) min-n) min-n)))))
+```
+
+### (b) **Embedding Storage**
+- Have a (hash-)table or vector of all (hashed) n-gram embeddings (plus, optionally, word-specific vectors).
+- Compose word embedding by summing these at both input (embedding) and output (context) layers.
+
+### (c) **In Forward/Backward Steps**
+- For every context or target word:
+    - Obtain its n-grams
+    - Build input/output vectors as sum (or average) of its n-gram embeddings
+- When updating:
+    - Apply gradients to all n-gram vectors composing that word.
+
+### (d) **OOV Support**
+- If a test word is OOV (not in vocab), you can still compute its vector by summing its n-grams.
+
+---
+
+## ☑️ **Checklist: fastText-Style CBOW**
+
+- [ ] Subword (n-gram) embedding table and word-to-n-grams routine
+- [ ] Forward: Build (sum/average) word vectors from n-grams for all input/output words
+- [ ] Backward (gradient updates): Update all n-gram embeddings participating in prediction
+- [ ] (Optional) Hashing/truncation to manage memory footprint for huge n-gram sets
+- [ ] Test via OOV inference: confirm that predictions for new words use n-grams correctly
+
+---
+
+## 📚 **References**
+
+- [fastText paper](https://arxiv.org/abs/1607.04606)
+- [Facebook fastText docs](https://fasttext.cc/docs/en/cbow.html)
+
+---
+
+**In summary:**  
+The main gap is **subword (n-gram) modeling**: you need to represent each word as a composed vector of its n-gram embeddings, and ensure all train/inference logic uses the composed vector (including gradients and negative sampling). Everything else (subsampling, negative sampling, CBOW logic) is compatible.
+
+If you’d like a direct code sketch for one of these steps, let me know!
+
+ChatGPT(gpt-4.1/General)> break down train-autoregressive-cbow-neg-sample  into components
+<shell-maker-end-of-prompt>
+Absolutely! Let’s decompose the `train-autoregressive-cbow-neg-sample` routine into clear, composable **Scheme functions**.  
+This will make adapting or extending (e.g., for fastText n-gram representation) much easier.
+
+---
+
+## 🎯 Main Components
+
+1. **Context Extraction**
+2. **Averaging Context Embeddings**
+3. **Negative Sampling**
+4. **Forward (Score, Sigmoid) Computation**
+5. **Loss and Gradient Computation**
+6. **Parameter Updates**
+7. **Epoch & Corpus Loop**
+
+---
+
+### 1. Context Extraction
+
+```scheme
+(define (extract-context corpus i window)
+  ;; Returns a list of word-ids in the context window around position i (excluding i itself)
+  (let ((left (max 0 (- i window)))
+        (right (min (vector-length corpus) (+ i window 1))))
+    (append (vector->list (vector-copy corpus left i))
+            (vector->list (vector-copy corpus (+ i 1) right)))))
+```
+
+---
+
+### 2. Averaging Context Embeddings
+
+```scheme
+(define (average-vectors vec-list)
+  (let ((n (length vec-list)))
+    (if (zero? n)
+        (error "No vectors to average")
+        (let ((sum (foldl vector-add (make-zero-vector (vector-length (car vec-list))) vec-list)))
+          (vector-scale sum (/ 1.0 n))))))
+```
+Assumes you have `vector-add`, `vector-scale`, `make-zero-vector`.
+
+---
+
+### 3. Negative Sampling
+
+```scheme
+(define (sample-negatives vocab-size center-id k)
+  ;; Returns a list of k negative word-ids (≠ center-id)
+  (let loop ((result '()))
+    (if (= (length result) k)
+        result
+        (let ((cand (random vocab-size)))
+          (if (or (= cand center-id)
+                  (member cand result))
+              (loop result)
+              (loop (cons cand result)))))))
+```
+
+---
+
+### 4. Forward (Score, Sigmoid) Computation
+
+```scheme
+(define (compute-sigmoid-scores context-mean output-matrix center-id neg-ids)
+  (let* ((center-vec (lookup-embedding output-matrix center-id))
+         (neg-vecs (map (lambda (wid) (lookup-embedding output-matrix wid)) neg-ids))
+         (pos-dot (dot center-vec context-mean))
+         (pos-sig (sigmoid pos-dot))
+         (neg-dots (map (lambda (vec) (dot vec context-mean)) neg-vecs))
+         (neg-sigs (map (lambda (x) (sigmoid (- x))) neg-dots)))
+    (list pos-sig neg-sigs center-vec neg-vecs)))
+```
+
+---
+
+### 5. Loss and Gradient Computation
+
+```scheme
+(define (compute-cbow-neg-sample-gradients context-mean center-vec neg-vecs pos-sig neg-sigs)
+  ;; context-mean, center-vec: vectors
+  ;; neg-vecs: list of vectors
+  ;; pos-sig: positive sigmoid
+  ;; neg-sigs: list of negative sigmoids
+  (let ((grad-context
+         (vector-sub
+           (vector-scale center-vec (- 1 pos-sig))
+           (foldl vector-add (make-zero-vector (vector-length center-vec))
+                  (map (lambda (neg vec-neg-sig)
+                         (vector-scale neg (- vec-neg-sig 1)))
+                       neg-vecs neg-sigs)))))
+    grad-context))
+```
+
+---
+
+### 6. Parameter Updates
+
+_For embeddings and output vectors (assuming in-place updates):_
+
+```scheme
+(define (update-context-embeddings! embedding-matrix context-ids grad-context learning-rate)
+  (for-each (lambda (wid)
+              (update-embedding! embedding-matrix wid grad-context learning-rate))
+            context-ids))
+
+(define (update-output-embeddings! output-matrix center-id neg-ids context-mean pos-sig neg-sigs learning-rate)
+  ;; Update center word
+  (update-embedding! output-matrix center-id (vector-scale context-mean (- 1 pos-sig)) learning-rate)
+  ;; Update negative samples
+  (for-each2
+    (lambda (neg-id neg-sig)
+      (update-embedding! output-matrix neg-id (vector-scale context-mean (- neg-sig 1)) learning-rate))
+    neg-ids neg-sigs))
+```
+Assumes `for-each2` as before.
+
+---
+
+### 7. Main Training Loop (Epoch & Corpus)
+
+```scheme
+(define (train-autoregressive-cbow-neg-sample corpus window embedding-matrix output-matrix learning-rate epochs vocab-size k)
+  (let ((corpus-length (vector-length corpus)))
+    (do ((epoch 0 (+ epoch 1)))
+        ((>= epoch epochs))
+      (do ((i window (+ i 1)))
+          ((>= i (- corpus-length window)))
+        (let* ((context-ids (extract-context corpus i window))
+               (center-id (vector-ref corpus i))
+               (context-embeddings (map (lambda (wid)
+                                          (lookup-embedding embedding-matrix wid))
+                                        context-ids))
+               (context-mean (average-vectors context-embeddings))
+         (neg-ids (sample-negatives vocab-size center-id k))
+               (sigmoid-results (compute-sigmoid-scores context-mean output-matrix center-id neg-ids))
+               (pos-sig (car sigmoid-results))
+               (neg-sigs (cadr sigmoid-results))
+               (center-vec (caddr sigmoid-results))
+               (neg-vecs (cadddr sigmoid-results))
+               (grad-context (compute-cbow-neg-sample-gradients context-mean center-vec neg-vecs pos-sig neg-sigs)))
+          (update-context-embeddings! embedding-matrix context-ids grad-context learning-rate)
+          (update-output-embeddings! output-matrix center-id neg-ids context-mean pos-sig neg-sigs learning-rate))))))
+```
+
+---
+
+## 🔑 **Summary Table**
+
+| Component                            | Function Name(s)                      |
+|---------------------------------------|---------------------------------------|
+| Context Extraction                    | `extract-context`                     |
+| Averaging Context Embeddings          | `average-vectors`                     |
+| Negative Sampling                     | `sample-negatives`                    |
+| Forward Sigmoid Computation           | `compute-sigmoid-scores`              |
+| Gradients Computation                 | `compute-cbow-neg-sample-gradients`   |
+| Embedding Updates                     | `update-context-embeddings!`, `update-output-embeddings!` |
+| Main Training Loop                    | `train-autoregressive-cbow-neg-sample`|
+
+---
+
+**With this breakdown, you can easily:**
+- Replace word-level lookups with subword composite lookups (for fastText)
+- Swap in alternative context aggregation functions
+- Adjust negative sampling logic or plugging in better sampling methods
+
+Let me know if you want sample code for n-gram embedding aggregation, mirrored on this design!
+
+ChatGPT(gpt-4.1/General)> what is the difference between update-context-embeddings! and update-output-embeddings!?
+<shell-maker-end-of-prompt>
+Great question!  
+The difference between `update-context-embeddings!` and `update-output-embeddings!` is **which embedding matrices they modify**, and **what each type of matrix represents in the CBOW/word2vec architecture**:
+
+---
+
+## 1. **update-context-embeddings!**
+
+- **What it updates:**  
+  The main **word input embedding matrix** (sometimes called the "input" or "context" embeddings).
+- **Who it updates:**  
+  The *context words*' embeddings. That is, for each word in the context window, the embedding that is fed into the network is tweaked to reduce prediction error.
+- **Why:**  
+  By updating the embeddings of context words, the model learns to provide better features (inputs) for predicting center words.
+
+**Analogy:**  
+In CBOW, context words are the network’s input. This updater optimizes how informative those context word vectors are.
+
+---
+
+## 2. **update-output-embeddings!**
+
+- **What it updates:**  
+  The **output embedding matrix** ("output" or "target" embeddings).  
+- **Who it updates:**  
+  The embeddings corresponding to the predicted center word (for positive samples) and the sampled negative words.
+- **Why:**  
+  By updating the output vectors for the actual center (positive) and negative sample words, the model learns which outputs (center word IDs) should be likely and which unlikely given a context.
+
+**Analogy:**  
+In CBOW, the center word labels are the outputs. This updater tweaks how “attractive” the results are to match the desired center/negative signals.
+
+---
+
+### **Visualization**
+
+Suppose for step \( t \) in the sentence we have:
+
+| Type      | Matrix                   | Words affected         | Example for "brown" in "The quick brown fox" (context=quick,fox)        |
+|-----------|--------------------------|------------------------|--------------------------------------------------------------------------|
+| Context   | Input embedding matrix   | Context words          | `quick`, `fox` input embeddings updated by `update-context-embeddings!`  |
+| Output    | Output embedding matrix  | Center/neg sample words| `"brown"` (center, positive), negatives (e.g., `"apple"`, `"zebra"`) via `update-output-embeddings!` |
+
+---
+
+## **Summary Table**
+
+| Function                         | Updates...             | Embeddings Modified            | Purpose                              |
+|---------------------------------- |------------------------|--------------------------------|--------------------------------------|
+| `update-context-embeddings!`      | Context words          | Input embedding matrix         | Make context vectors more predictive |
+| `update-output-embeddings!`       | Center + negatives     | Output embedding matrix        | Tune scoring of true/false outputs   |
+
+---
+
+In practical code, both functions apply the computed gradient (from the backward pass) to their respective word vectors in the respective matrices, but they work on *different sets of vectors* for each training sample.
+
+If you later implement subword/fastText logic, you’ll apply these updates to *all n-gram vectors* composing a given word on their respective side.
+
+---
+
+**Let me know if you want an illustration for Skip-gram (where the roles are swapped)!**
+
+ChatGPT(gpt-4.1/General)> what is missing for a full cbow implementation in this sketch?
+
+```scheme
+(define (train-autoregressive-cbow-neg-sample corpus window embedding-matrix output-matrix learning-rate vocab-size negative-size)
+  (let ((corpus-length (vector-length corpus)))
+    (do ((i window (+ i 1)))
+        ((>= i (- corpus-length window)))
+      (let* ((context-ids (extract-context corpus i window))
+             (center-id (vector-ref corpus i))
+             (context-embeddings (map (lambda (wid)
+                                        (lookup-embedding embedding-matrix wid))
+                                      context-ids))
+             (context-mean (average-vectors context-embeddings))
+             (neg-ids (sample-negatives vocab-size center-id negative-size))
+             (sigmoid-results (compute-sigmoid-scores context-mean output-matrix center-id neg-ids))
+             (pos-sig (car sigmoid-results))
+             (neg-sigs (cadr sigmoid-results))
+             (center-vec (caddr sigmoid-results))
+             (neg-vecs (cadddr sigmoid-results))
+             (grad-context (compute-cbow-neg-sample-gradients context-mean center-vec neg-vecs pos-sig neg-sigs)))
+        (update-context-embeddings! embedding-matrix context-ids grad-context learning-rate)
+        (update-output-embeddings! output-matrix center-id neg-ids context-mean pos-sig neg-sigs learning-rate)))))
+
+(define (sigmoid x) (/ 1.0 (+ 1.0 (exp (- x)))))
+
+(define corpus (vector 12 45 101 2)) ;; word indices
+
+(define (random-real) (/ (random 1000000) 1000000.0))
+
+(define (compute-frequencies corpus vocab-size)
+  (let ((counts (make-vector vocab-size 0))
+        (total (vector-length corpus)))
+    (vector-for-each (lambda (wid)
+                       (vector-set! counts wid (+ 1 (vector-ref counts wid))))
+                     corpus)
+    (map (lambda (cnt) (/ cnt total))
+         (vector->list counts))))
+
+;; Compute the keep probability for each word
+(define (compute-keep-probsfreqs t)
+  (map (lambda (f)
+         (min 1.0 (+ (sqrt (/ t f)) (/ t f))))
+       freqs))
+
+;; Subsampling function: returns a filtered copy of corpus vector
+(define (subsample-corpus corpus keep-probs)
+  (list->vector
+   (filter (lambda (wid)
+             (> (random-real) (- 1 (list-ref keep-probs wid))))
+           (vector->list corpus))))
+
+;; for-each2 applies fun to each element in all given lists (like Python's zip)
+(define (for-each2 fun l1 l2 l3)
+  (let loop ((l1 l1) (l2 l2) (l3 l3))
+    (if (null? l1) 'done
+        (begin
+          (fun (car l1) (car l2) (car l3))
+          (loop (cdr l1) (cdr l2) (cdr l3))))))
+
+(define (word-ngrams word min-n max-n)
+  ;; Returns a list of n-grams for word, including word boundaries
+  (let ((w (string-append "<" word ">")))
+    (apply append
+           (map (lambda (n)
+                  (let loop ((i 0) (lst '()))
+                    (if (<= (+ i n) (string-length w))
+                        (loop (+ i 1)
+                              (cons (substring w i (+ i n)) lst))
+                        lst)))
+                (iota (- (+ 1 max-n) min-n) min-n)))))
+
+(define (extract-context corpus i window)
+  ;; Returns a list of word-ids in the context window around position i (excluding i itself)
+  (let ((left (max 0 (- i window)))
+        (right (min (vector-length corpus) (+ i window 1))))
+    (append (vector->list (vector-copy corpus left i))
+            (vector->list (vector-copy corpus (+ i 1) right)))))
+
+(define (average-vectors vec-list)
+  (let ((n (length vec-list)))
+    (if (zero? n)
+        (error "No vectors to average")
+        (let ((sum (foldl vector-add (make-zero-vector (vector-length (car vec-list))) vec-list)))
+          (vector-scale sum (/ 1.0 n))))))
+
+(define (sample-negatives vocab-size center-id k)
+  ;; Returns a list of k negative word-ids (≠ center-id)
+  (let loop ((result '()))
+    (if (= (length result) k)
+        result
+        (let ((cand (random vocab-size)))
+          (if (or (= cand center-id)
+                  (member cand result))
+              (loop result)
+              (loop (cons cand result)))))))
+
+(define (compute-sigmoid-scores context-mean output-matrix center-id neg-ids)
+  (let* ((center-vec (lookup-embedding output-matrix center-id))
+         (neg-vecs (map (lambda (wid) (lookup-embedding output-matrix wid)) neg-ids))
+         (pos-dot (dot center-vec context-mean))
+         (pos-sig (sigmoid pos-dot))
+         (neg-dots (map (lambda (vec) (dot vec context-mean)) neg-vecs))
+         (neg-sigs (map (lambda (x) (sigmoid (- x))) neg-dots)))
+    (list pos-sig neg-sigs center-vec neg-vecs)))
+
+(define (compute-cbow-neg-sample-gradients context-mean center-vec neg-vecs pos-sig neg-sigs)
+  ;; context-mean, center-vec: vectors
+  ;; neg-vecs: list of vectors
+  ;; pos-sig: positive sigmoid
+  ;; neg-sigs: list of negative sigmoids
+  (let ((grad-context
+         (vector-sub
+           (vector-scale center-vec (- 1 pos-sig))
+           (foldl vector-add (make-zero-vector (vector-length center-vec))
+                  (map (lambda (neg vec-neg-sig)
+                         (vector-scale neg (- vec-neg-sig 1)))
+                       neg-vecs neg-sigs)))))
+    grad-context))
+
+
+(define (update-context-embeddings! embedding-matrix context-ids grad-context learning-rate)
+  (for-each (lambda (wid)
+              (update-embedding! embedding-matrix wid grad-context learning-rate))
+            context-ids))
+
+(define (update-output-embeddings! output-matrix center-id neg-ids context-mean pos-sig neg-sigs learning-rate)
+  ;; Update center word
+  (update-embedding! output-matrix center-id (vector-scale context-mean (- 1 pos-sig)) learning-rate)
+  ;; Update negative samples
+  (for-each2
+   (lambda (neg-id neg-sig)
+     (update-embedding! output-matrix neg-id (vector-scale context-mean (- neg-sig 1)) learning-rate))
+   neg-ids neg-sigs))
+
+
+(define (make-zero-vector) ...)
+(define (vector-add . vectors) ...)
+(define (vector-sub u v) ...)
+(define (vector-scale v alpha) ...)
+(define (average-vectors vector-list) ...)
+(define (dot u v) ...)
+(define (lookup-embedding embedding-matrix word-id) ...)
+(define (matrix-mul matrix vector) ...)
+(define (softmax scores) ...)
+(define (cross-entropy-loss probs target-id) ...)
+(define (compute-grads context-mean center-id pred-probs) ...)
+(define (update-output-matrix! output-matrix grads lr) ...)
+(define (update-embedding-matrix! embedding-matrix context-ids grads lr) ...)
+(define (average-vectors vlist) ...)
+(define (update-embedding! matrix word-id grad-vector lr) 
+  ;; update matrix[word-id] += lr * grad-vector
+  ...)
+(define (sample-negatives vocab-size center-id k) ...) ; returns list of k word-ids ≠ center-id
+
+```
+<shell-maker-end-of-prompt>
+You have a **thorough and modular sketch**—but for a **full, functioning, standard CBOW implementation** (even just word-level, not fastText), a few substantial elements are missing or incomplete.
+
+---
+
+## 🟩 What’s Covered (✓):
+
+- Main CBOW + negative sampling update loop (per training step)
+- Context extraction, vector averaging, vector algebra, sigmoid, etc.
+- Modular update functions
+- Negative sampling
+- Subsampling helpers (although not fully integrated in the main loop)
+- Signature stubs for key matrix/vector ops
+
+---
+
+## 🟥 What’s *Missing* or Incomplete:
+
+### 1. **No Corpus Iteration over Multiple Epochs / Full Sampling Integration**
+- Your `train-autoregressive-cbow-neg-sample` only processes a **single pass over the corpus**—no batching, no shuffling, no multiple epochs.
+- The **subsampling routine** (drop frequent words) is **not called or used** anywhere in the training loop—should filter the corpus before training.
+
+**Missing integration example:**
+```scheme
+(do ((epoch 0 (+ epoch 1)))
+    ((>= epoch epochs))
+  (let ((filtered-corpus (subsample-corpus corpus keep-probs)))
+    (do ((i window (+ i 1)))
+        ((>= i (- (vector-length filtered-corpus) window)))
+      ...)))
+```
+And, you'll want to call `compute-frequencies` and `compute-keep-probsfreqs` at setup.
+
+---
+
+### 2. **No Initialization of Embedding/Output Matrices**
+- There are references to `embedding-matrix` and `output-matrix`, but no code to **initialize them** (random or zeros).
+- No vocabulary dictionary or mapping actual words to `word-id` (for non-synthetic datasets).
+
+---
+
+### 3. **Missing Core Implementations for “...stub” Functions**
+- All the core vector algebra is just defined as `(define (vector-add ...) ...)` etc.—no implementation given.
+- No implementations for `make-zero-vector`, `lookup-embedding`, `update-embedding!` (the latter is stubbed in).
+
+---
+
+### 4. **No Learning Rate Decay or Scheduling**
+- Modern CBOW uses a decaying learning rate, but only a constant is present.
+
+---
+
+### 5. **No Saving/Loading or Evaluation**
+- No code to save the learned embeddings/matrices
+- No way to test or evaluate (e.g., analogy task, similarity query)
+- No prediction/inference interface
+
+---
+
+### 6. **No OOV / Subword (fastText) Support**
+- The n-gram routine is present (`word-ngrams`) but never integrated into embedding lookup or updates.
+- To make this **fastText-compatible**, you need to:
+    - Build lookups via n-grams for words/OOVs.
+    - Update all n-gram vectors during training.
+
+---
+
+### 7. **No Mini-batching (optional but practical)**
+- This is a sequential, step-wise implementation. real CBOW often batches for efficiency.
+
+---
+
+### 8. **No Gradient Clipping or Numerical Safeguards**
+- No handling for potential explosion or instability (rare but basic setups should be robust).
+
+---
+
+## 🟨 **Typical Minimal Pipeline** (not full in your code yet):
+
+1. **Corpus Preparation:**  
+   - Text → token IDs  
+   - (Optional) Subsampling integrated
+
+2. **Vocabulary & Mappings:**  
+   - (word → id), (id → word)
+
+3. **Model Initialization:**  
+   - Embedding and output matrices (with right shapes, random init)
+
+4. **Training Loop:**  
+   - for `epochs`:
+     - Corpus filtering (subsampling)
+     - for all positions:
+       - Extract center, context
+       - **(Optionally shuffle corpus for SGD)**
+       - Negative sampling
+       - Embedding composition (plain word or subword sum)
+       - Forward, backward, update
+
+5. **(Optional) Validation/Monitoring, Checkpointing**
+
+---
+
+## 🟦 **What To Add/Complete for a Full Implementation:**
+
+- **Epoch loop** and integration of subsampling
+- **Matrix/vector primitives** (add, scale, zeros, dot, etc.)
+- **Matrix initialization**
+- **Actual lookup/update logic** for embedding/output matrices
+- **Integration of OOV / ngram modeling** (if fastText-style)
+- **Saving / Evaluation utilities**
+- **Corpus preprocessing for real data** (not just synthetic corpus vectors)
+
+---
+
+## 📝 **Summary Table**
+
+| Area                                      | Present? | Action Required                         |
+|--------------------------------------------|----------|------------------------------------------|
+| Full training loop/multiepoch with subsampling | ⛔      | Integrate sampling into main loop        |
+| Vector/matrix ops (add, scale, zeros, etc.)| ⛔      | Implement or port from libs              |
+| Embedding/output matrix initialization     | ⛔      | Add code for random (small) init         |
+| All update/lookup primitives               | ⛔      | Implement for array/srfi-4/flat-storage  |
+| FastText n-gram embedding logic            | ⛔      | For subword, wire up `word-ngrams` usage |
+| Data pipeline (text→ids, vocab build)      | ⛔      | Required for real corpus                 |
+| Batching/gradient step accumulation        | ⛔      | Only if desired; would accelerate        |
+| Evaluation, saving/loading                 | ⛔      | Add for practical usage                  |
+
+---
+
+## 🚦 **Conclusion**
+
+Your design covers almost all **structure** but almost none of the **mechanics/implementations** of:
+- Embedding math
+- Corpus/lifecycle management
+- FastText composite embeddings
+
+**Add these and it will be a complete, functional, extensible CBOW system.**
+
+Let me know if you need a specific missing part written out!
+
+ChatGPT(gpt-4.1/General)> 
+
+i just added (define (make-zero-embedding-matrix num-entries dim) ...). write an initialize function that initializes the state of all important parts of the model. 
+<shell-maker-end-of-prompt>
+Certainly!  
+Let's clarify what must be initialized for a basic CBOW (word-level, not yet fastText n-gram) model:
+
+- The **embedding matrix**:  shape `[vocab-size x embedding-dim]`, for *input/context* word vectors  
+- The **output/target matrix**: shape `[vocab-size x embedding-dim]`, for *output/center* word vectors  
+- (Optional for easy extension/compatibility: a configuration structure with hyperparameters, vocab, etc.)
+
+We'll assume you have a function  
+`(make-zero-embedding-matrix num-entries dim)`  
+and we'll add a corresponding  
+`(randomize-embedding-matrix! matrix)`  
+to fill a matrix with small random values.
+
+---
+
+## Model State Initialization Function
+
+```scheme
+;; Helper to fill a matrix with small random numbers (e.g., uniform[-0.5/d, 0.5/d])
+(define (randomize-embedding-matrix! matrix)
+  (let* ((num-entries (vector-length matrix))
+         (dim (vector-length (vector-ref matrix 0)))
+         (scale (/ 0.5 dim)))
+    (do ((i 0 (+ i 1)))
+        ((= i num-entries))
+      (let ((row (vector-ref matrix i)))
+        (do ((j 0 (+ j 1)))
+            ((= j dim))
+          (vector-set! row j (- (* (random-real) 2 scale) scale))))
+      (vector-set! matrix i row))
+    matrix))
+
+;; Main model initialization function
+(define (initialize-cbow-model vocab-size embedding-dim)
+  ;; Make and randomize embedding matrices for input and output
+  (let* ((embedding-matrix (make-zero-embedding-matrix vocab-size embedding-dim))
+         (output-matrix (make-zero-embedding-matrix vocab-size embedding-dim)))
+    (randomize-embedding-matrix! embedding-matrix)
+    (randomize-embedding-matrix! output-matrix)
+    ;; Return as a state record, here as an assoc list
+    `((embedding-matrix . ,embedding-matrix)
+      (output-matrix . ,output-matrix)
+      (vocab-size . ,vocab-size)
+      (embedding-dim . ,embedding-dim))))
+```
+
+---
+
+### Usage Example
+
+```scheme
+;; e.g. for a vocabulary of 10000 words and 100-dimensional embeddings:
+(define model-state (initialize-cbow-model 10000 100))
+
+;; Access embedding matrix for use in training
+(define embedding-matrix (assoc-ref model-state 'embedding-matrix))
+(define output-matrix (assoc-ref model-state 'output-matrix))
+```
+
+---
+
+### Notes
+
+- You can use any record/assoc-list/data structure for the model state; here I use an assoc list for simplicity.
+- Extend this to include configuration (e.g. learning rate, window size) and vocab/word-id mapping as needed.
+- If you later move to fastText-style, you'll want analogous routines for the n-gram vector table.
+
+---
+
+**Let me know if you want similar code for n-gram embedding tables or corpus pre-tokenization!**
+
+ChatGPT(gpt-4.1/General)> add code for word n-grams 
+<shell-maker-end-of-prompt>
+Certainly! Below are **Scheme functions for computing word n-grams** (with word boundary markers, as in fastText), and a helper for mapping a corpus of token IDs back to words and then to their n-grams.
+
+Assumptions:
+
+- A word is a string, not a numeric ID.
+- You want **character-level n-grams** (as in fastText), including `<` and `>` as boundary markers.
+- Typical n-gram length ranges are 3–6 (but you can adjust).
+- You may want a mapping from word-ID back to word-string (for lookup).
+
+---
+
+## 1. **Get All Character N-grams for a Word**
+```scheme
+(define (word-ngrams word min-n max-n)
+  ;; Returns a list of character n-grams with boundaries, for n in [min-n, max-n]
+  (let* ((w (string-append "<" word ">"))
+         (wlen (string-length w)))
+    (apply append
+           (map (lambda (n)
+                  (let loop ((i 0) (lst '()))
+                    (if (<= (+ i n) wlen)
+                        (loop (+ i 1)
+                              (cons (substring w i (+ i n)) lst))
+                        lst)))
+                (iota (+ 1 (- max-n min-n)) min-n)))))
+```
+
+**Example:**
+```scheme
+(word-ngrams "where" 3 4)
+;; => ("re>" "ere" "her" "whe" "<wh" "e>" "re" "er" "he" "wh" "<w")
+```
+
+---
+
+## 2. **Getting n-grams for a whole corpus**  
+If you have a vector of word strings, generate maps (word string → n-gram list):
+
+```scheme
+(define (build-corpus-ngrams word-list min-n max-n)
+  ;; Returns an association list: ((word . (ngram ...)) ...)
+  (map (lambda (word)
+         (cons word (word-ngrams word min-n max-n)))
+       word-list))
+```
+
+---
+
+## 3. **Example: Mapping IDs to n-grams**
+
+Suppose you have:
+- `id->word`: a vector mapping word IDs to word strings
+- `corpus-ids`: vector of word IDs
+
+You can look up a word's n-grams with:
+
+```scheme
+(define (id->ngrams word-id id->word min-n max-n)
+  (word-ngrams (vector-ref id->word word-id) min-n max-n))
+```
+
+---
+
+## 4. **Example: Build n-gram table for vocab**
+
+Given a vocabulary of words (from your corpus):
+
+```scheme
+(define (build-ngram-table word-list min-n max-n)
+  ;; Map ngram string -> set of word indices that contain it (if desired)
+  (let ((table (make-hash-table)))
+    (for-each (lambda (word-id)
+                (let ((ngrams (word-ngrams (list-ref word-list word-id) min-n max-n)))
+                  (for-each (lambda (ng)
+                              (hash-table-update!/default table ng
+                                (lambda (lst) (cons word-id lst))
+                                '()))
+                            ngrams)))
+              (iota (length word-list)))
+    table))
+```
+
+---
+
+##5. **Efficient Storage for Embeddings**
+
+Usually, you create an **embedding table for n-grams** of size N x D where N is number of unique n-grams (possibly capped via hashing).
+
+**Typical approach:** Hash each n-gram string to an integer in `[0, ngram-table-size)`, and use that as the index in the n-gram embedding matrix.
+
+```scheme
+;; Example: simple hash mapping
+(define (ngram->index ngram ngram-table-size)
+  (modulo (string-hash ngram) ngram-table-size))
+```
+
+---
+
+## 6. **Putting It Together: Get all embedding indices for a word**
+
+```scheme
+;; For a word string, return all n-gram embedding indices (via hash)
+(define (word-embedding-indices word min-n max-n ngram-table-size)
+  (map (lambda (ng)
+         (ngram->index ng ngram-table-size))
+       (word-ngrams word min-n max-n)))
+```
+
+---
+
+## 🔑 **Summary Table**
+
+| Function                  | Purpose                          |
+|---------------------------|----------------------------------|
+| `word-ngrams`             | List all character n-grams       |
+| `build-corpus-ngrams`     | Map words to n-grams             |
+| `build-ngram-table`       | Map n-grams to words/ids         |
+| `ngram->index`            | Hash n-gram to embedding row     |
+| `word-embedding-indices`  | Word string to n-gram indices    |
+
+---
+
+## 🎯 **Typical fastText n-gram Pipeline**
+1. For each word, collect its (min-n, max-n)-grams with boundaries.
+2. Map n-grams to embedding indices (usually via hash).
+3. During training, build a word vector as **sum/average of these n-gram embeddings** (+ optional unique word embedding).
+4. Update all n-gram embeddings for each word during training.
+
+---
+
+**Let me know if you want:**  
+- code for summing n-gram embeddings for a word during lookup  
+- code for updating all n-gram vectors on a gradient step  
+- integration with your model’s main loop!
+
+ChatGPT(gpt-4.1/General)> rewrite the training loop to include n-gram embeddings: (define (train-autoregressive-cbow-neg-sample corpus window embedding-matrix output-matrix learning-rate vocab-size negative-size)
+  (let ((corpus-length (vector-length corpus)))
+    (do ((i window (+ i 1)))
+        ((>= i (- corpus-length window)))
+      (let* ((context-ids (extract-context corpus i window))
+             (center-id (vector-ref corpus i))
+             (context-embeddings (map (lambda (wid)
+                                        (lookup-embedding embedding-matrix wid))
+                                      context-ids))
+             (context-mean (average-vectors context-embeddings))
+             (neg-ids (sample-negatives vocab-size center-id negative-size))
+             (sigmoid-results (compute-sigmoid-scores context-mean output-matrix center-id neg-ids))
+             (pos-sig (car sigmoid-results))
+             (neg-sigs (cadr sigmoid-results))
+             (center-vec (caddr sigmoid-results))
+             (neg-vecs (cadddr sigmoid-results))
+             (grad-context (compute-cbow-neg-sample-gradients context-mean center-vec neg-vecs pos-sig neg-sigs)))
+        (update-context-embeddings! embedding-matrix context-ids grad-context learning-rate)
+        (update-output-embeddings! output-matrix center-id neg-ids context-mean pos-sig neg-sigs learning-rate)))))
+<shell-maker-end-of-prompt>
+
+
+
+
+Certainly! Here’s how to rewrite your **CBOW with negative sampling** loop to use **n-gram embeddings** (fastText style) for both context and center words.
+
+### **Assumptions**
+- You have these global/argument variables:  
+  - `embedding-matrix`: n-gram embedding matrix (`ngram-table-size x embedding-dim`)
+  - `output-matrix`: n-gram embedding matrix for output, same shape. (You may share or split these; here kept as distinct.)
+  - `id->word`: a vector that maps word IDs to strings
+  - `min-n`, `max-n`, `ngram-table-size`: n-gram parameters
+- You have helper functions:
+  - `(word-ngrams word min-n max-n)` : returns a word’s n-gram strings (with boundaries)
+  - `(ngram->index ngram ngram-table-size)` : returns an index for the n-gram in the embedding matrices
+  - `(lookup-ngram-embedding matrix ngram-list)` : returns a sum or average of (rows of `matrix` for n-gram indices)
+  - `(update-ngram-embeddings! matrix ngram-list grad-vec lr)` : update all n-gram vectors in `matrix` by grad
+- The negative samples are still word IDs; always use their n-grams.
+
+---
+
+## **Training Loop (Updated, fastText style)**
+
+```scheme
+(define (train-autoregressive-cbow-neg-sample-ngram
+          corpus window embedding-matrix output-matrix learning-rate
+          vocab-size negative-size min-n max-n ngram-table-size id->word)
+  (let ((corpus-length (vector-length corpus)))
+    (do ((i window (+ i 1)))
+        ((>= i (- corpus-length window)))
+      (let* ((context-ids (extract-context corpus i window))
+             (center-id (vector-ref corpus i))
+             ;; 1. Get n-grams for each context word and build mean context vector
+             (context-ngram-lists (map (lambda (wid)
+                                         (let ((word (vector-ref id->word wid)))
+                                           (word-ngrams word min-n max-n)))
+                                       context-ids))
+             (context-vecs (map (lambda (ngram-list)
+                                  (lookup-ngram-embedding embedding-matrix
+                                                          (map (lambda (ng) (ngram->index ng ngram-table-size))
+                                                               ngram-list)))
+                                context-ngram-lists))
+             (context-mean (average-vectors context-vecs))
+
+             ;; 2. Get n-grams for center word & negatives
+             (center-word (vector-ref id->word center-id))
+             (center-ngram-list (word-ngrams center-word min-n max-n))
+             (center-ngram-indices (map (lambda (ng) (ngram->index ng ngram-table-size)) center-ngram-list))
+             (neg-ids (sample-negatives vocab-size center-id negative-size))
+             (neg-ngram-indices-lists
+               (map (lambda (wid)
+                      (let ((w (vector-ref id->word wid)))
+                        (map (lambda (ng) (ngram->index ng ngram-table-size))
+                             (word-ngrams w min-n max-n))))
+                    neg-ids))
+             ;; 3. Compose ngram embeddings for output vectors
+             (center-output-vec
+               (lookup-ngram-embedding output-matrix center-ngram-indices))
+             (neg-output-vecs
+               (map (lambda (ngram-indices)
+                      (lookup-ngram-embedding output-matrix ngram-indices))
+                    neg-ngram-indices-lists))
+             ;; 4. Forward pass: scores, sigmoids
+             (pos-dot (dot center-output-vec context-mean))
+             (pos-sig (sigmoid pos-dot))
+             (neg-dots (map (lambda (v) (dot v context-mean)) neg-output-vecs))
+             (neg-sigs(map (lambda (x) (sigmoid (- x))) neg-dots))
+             ;; 5. Gradient for context vector
+             (grad-context (compute-cbow-neg-sample-gradients context-mean center-output-vec neg-output-vecs pos-sig neg-sigs)))
+        ;; 6. Update all context n-gram embeddings
+        (for-each (lambda (ngram-list)
+                    (update-ngram-embeddings! embedding-matrix
+                                              (map (lambda (ng) (ngram->index ng ngram-table-size))
+                                                   ngram-list)
+                                              grad-context learning-rate))
+                  context-ngram-lists)
+        ;; 7. Update center word n-gram output embeddings
+        (update-ngram-embeddings! output-matrix center-ngram-indices
+                                  (vector-scale context-mean (- 1 pos-sig))
+                                  learning-rate)
+        ;; 8. Update negative samples' n-gram output embeddings
+        (for-each2
+          (lambda (ngram-indices neg-sig)
+            (update-ngram-embeddings! output-matrix ngram-indices
+                                      (vector-scale context-mean (- neg-sig 1))
+                                      learning-rate))
+          neg-ngram-indices-lists neg-sigs)))))
+```
+
+---
+
+## **Core Helper Function Signatures**
+
+```scheme
+(define (word-ngrams word min-n max-n) ...) ;; returns list of n-gram strings
+(define (ngram->index ngram ngram-table-size) ...) ;; string -> int
+(define (lookup-ngram-embedding matrix ngram-indices)
+  ;; sum/average vecs for ngram indices from matrix
+  (average-vectors (map (lambda (i) (vector-ref matrix i)) ngram-indices)))
+
+(define (update-ngram-embeddings! matrix ngram-indices grad-vec lr)
+  (for-each (lambda (i)
+              (update-embedding! matrix i grad-vec lr))
+            ngram-indices))
+```
+(Typically, sum for input/context; average for fastText scoring in eval—but sum here is common.)
+
+---
+
+## **What Changed vs Word-based CBOW loop?**
+
+- Look up/sum n-gram embeddings for each word in context, center, negatives.
+- During updates: update **all relevant n-gram embeddings** for these words.
+- This enables OOV and rare word generalization via shared n-grams.
+
+---
+
+**Let me know if you want even more detail, or a minimal set of all helpers needed for a full working version!**
+
+ChatGPT(gpt-4.1/General)> write an outer training loop function that runs the model for a given number of epochs splitting the dataset epoch into a given number of examples per batch. after each iteration save the model to disk (write stub functions for disk interactions) and run evaluation
+<shell-maker-end-of-prompt>
+Absolutely! Here’s a complete outer training loop in MIT/GNU Scheme style, with batch processing, epoch control, model saving/loading as stubs, and evaluation called each epoch.
+
+---
+
+### 🟦 **Assumptions**
+
+- You have a function  
+  `(train-autoregressive-cbow-neg-sample-ngram ...)`  
+  that processes *one batch*, (such as the version above).
+
+- You have functions for:
+  - **Model Save/Load**
+    - `(save-model! model-state epoch)`  ;; stub
+    - `(load-model path)`                ;; stub
+  - **Evaluation**
+    - `(evaluate-model model-state eval-data)` ;; stub  
+      (prints or returns key metrics)
+  - **Batch Generation**
+    - `(batches dataset batch-size)` — yields a list of batches, e.g. full-batch batching.
+
+- The model state is a record or assoc-list containing at least `[embedding-matrix, output-matrix, id->word, ...]`.
+- Your dataset is a flat vector of word indices.
+
+---
+
+### 🟦 **Stub Functions (disk I/O & eval placeholders)**
+
+```scheme
+;; Save model state to disk (stub)
+(define (save-model! model-state epoch)
+  (display (string-append "Saving model at epoch " (number->string epoch) "\n"))
+  ;; Code to serialize and write model-state
+  'ok)
+
+;; Load model state from disk (stub: not required in loop but for completeness)
+(define (load-model path)
+  (display (string-append "Loading model from " path "\n"))
+  ;; Code to load model
+  'mock-model-state)
+
+;; Run validation (stub)
+(define (evaluate-model model-state eval-data)
+  (display "Evaluating model...\n")
+  ;; Compute and display evaluation metric
+  'ok)
+```
+
+---
+
+### 🟦 **Batch Generator**
+
+```scheme
+;; Returns a list of vectors (batches) of given batch-size from a larger vector
+(define (batches data batch-size)
+  (let ((len (vector-length data)))
+    (let loop ((i 0) (out '()))
+      (if (>= i len)
+          (reverse out)
+          (loop (+ i batch-size)
+                (cons (vector-copy data i (min len (+ i batch-size))) out))))))
+```
+
+---
+
+### 🟦 **Outer Training Loop**
+
+```scheme
+(define (train-cbow-model
+          train-corpus          ;; vector of word-ids
+          eval-data             ;; evaluation corpus or data
+          model-state           ;; assoc/record containing model variables
+          window
+          learning-rate
+          batch-size
+          epochs
+          negative-size
+          min-n
+          max-n
+          ngram-table-size)
+
+  (let ((vocab-size (assoc-ref model-state 'vocab-size))
+        (id->word   (assoc-ref model-state 'id->word)))
+    (do ((epoch 0 (+ epoch 1)))
+        ((>= epoch epochs))
+      (display (string-append "Epoch " (number->string epoch) "\n"))
+      ;; Shuffle (optional: for SGD stochasticity)
+      (let* ((corpus (shuffle-vector train-corpus))  ; or just train-corpus if you don't implement shuffle now
+             (batch-list (batches corpus batch-size)))
+        (for-each
+         (lambda (batch)
+           ;; Train model on this batch
+           (train-autoregressive-cbow-neg-sample-ngram
+            batch window
+            (assoc-ref model-state 'embedding-matrix)
+            (assoc-ref model-state 'output-matrix)
+            learning-rate vocab-size negative-size
+            min-n max-n ngram-table-size id->word))
+         batch-list))
+      ;; Save after each epoch
+      (save-model! model-state epoch)
+      ;; Evaluate
+  (evaluate-model model-state eval-data))))
+```
+
+---
+
+### 🟦 **Supporting Shuffle Function (optional)**
+
+If you'd like to use stochastic batch order across epochs:
+```scheme
+;; In-place Fisher-Yates shuffle for vectors
+(define (shuffle-vector vec)
+  (let ((n (vector-length vec)))
+    (do ((i 0 (+ i 1)))
+        ((>= i n) vec)
+      (let ((j (+ i (random (- n i)))))
+        ;; swap i and j
+        (let ((tmp (vector-ref vec i)))
+          (vector-set! vec i (vector-ref vec j))
+          (vector-set! vec j tmp)))) vec))
+```
+
+---
+
+### 🟦 **Usage Example**
+
+```scheme
+(define model-state (initialize-cbow-model vocab-size embedding-dim)) ; your initializer
+(assoc-set! model-state 'id->word id->word-vector) ; set up id->word if not present
+
+(train-cbow-model
+  train-corpus        ; e.g. (vector ...)
+  eval-data
+  model-state
+  5                   ; window
+  0.025               ; learning-rate
+  128                 ; batch-size
+  5                   ; epochs
+  5                   ; negative-size
+  3                   ; min-n
+  6                   ; max-n
+  2000000)            ; ngram-table-size
+```
+
+---
+
+## ⭐️ **Key Design Points:**
+- **Processes data in batches** (vector slices).
+- **Saves and evaluates** after each epoch.
+- **Stubbed disk/eval functions** make it easy to extend for real use.
+- **Extensible:** you can slot in more sophisticated batchers, savers, evaluators.
+
+---
+
+Let me know if you want **batching logic to keep context windows valid** at batch edges, or want a **minimal working train+eval in one file**!
+
+ChatGPT(gpt-4.1/General)> implement evaluate-model by that outputs log-likelihood of the center words in the evaluation set. compute the softmax over the entire vocabulary. consider subword ngrams
+<shell-maker-end-of-prompt>
+Absolutely―here’s how you’d implement `(evaluate-model ...)` to compute the mean log-likelihood (average log probability) of the **center words** in an evaluation set, using the CBOW+subword model and computing scores using the **full softmax over all vocabulary** (not negative sampling). 
+
+Assumptions:
+- You have `embedding-matrix` and `output-matrix` for input and output n-gram embeddings
+- You have `id->word` mapping
+- You have `ngram` functions as in previous examples
+- Your matrices can be indexed (e.g. `vector-ref matrix idx`)
+- Center word and context window are as in CBOW
+
+---
+
+## ⏩ **Evaluate-Model Function**
+
+```scheme
+;; Helper: get a word's ngram embedding (sum of ngram embeddings)
+(define (compose-word-embedding word embedding-matrix min-n max-n ngram-table-size)
+  (let* ((ngrams (word-ngrams word min-n max-n))
+         (ngram-indices (map (lambda (ng) (ngram->index ng ngram-table-size)) ngrams))
+         (vecs (map (lambda (i) (vector-ref embedding-matrix i)) ngram-indices)))
+    (average-vectors vecs))) ; or sum, but average for numerical stability
+
+;; Computes log-likelihood over evaluation set
+(define (evaluate-model model-state eval-corpus window min-n max-n ngram-table-size)
+  (let* ((embedding-matrix (assoc-ref model-state 'embedding-matrix))
+         (output-matrix (assoc-ref model-state 'output-matrix))
+       (id->word (assoc-ref model-state 'id->word))
+         (vocab-size (assoc-ref model-state 'vocab-size))
+         (corpus-length (vector-length eval-corpus))
+         (ll-sum 0.0)
+         (count 0))
+    (do ((i window (+ i 1)))
+        ((>= i (- corpus-length window)))
+      (let* ((context-ids (extract-context eval-corpus i window))
+             (center-id (vector-ref eval-corpus i))
+             ;; Compose embedding for each context word via n-grams:
+             (context-vecs
+               (map (lambda (wid)
+                      (compose-word-embedding (vector-ref id->word wid)
+                                              embedding-matrix min-n max-n ngram-table-size))
+                    context-ids))
+             (context-mean (average-vectors context-vecs))
+             ;; Compose output embedding for all vocab words:
+             (output-vecs
+               (map (lambda (wid)
+                      (compose-word-embedding (vector-ref id->word wid)
+                                   output-matrix min-n max-n ngram-table-size))
+                    (iota vocab-size)))
+             ;; Full softmax scores:
+             (scores (map (lambda (v) (dot v context-mean)) output-vecs))
+             (logsumexp
+               (let ((m (apply max scores)))
+                 (+ m (log (apply + (map (lambda (x) (exp (- x m))) scores))))))
+             (ll (- (list-ref scores center-id) logsumexp)))
+        (set! ll-sum (+ ll-sum ll))
+        (set! count (+ count 1))))
+    (let ((avgll (/ ll-sum count)))
+      (display (string-append "Average Log-Likelihood: " (number->string avgll) "\n"))
+      avgll)))
+```
+
+---
+
+### **Explanation:**
+
+- For each example:
+  1. Build a context vector (mean of subword n-gram embeddings for all context words)
+  2. For **every word in the vocabulary**, sum/average its output n-gram embeddings to make a candidate vector
+  3. Compute dot-product score for each vocab word with the context vector
+  4. Compute softmax denominator in *numerically stable* way (logsumexp trick)
+  5. The probability of the center word is \(\frac{\exp(\text{score}_{center})}{\sum_j \exp(\text{score}_j)}\)
+  6. Log-likelihood is \(\text{score}_{center} - \log\sum_j \exp(\text{score}_j)\)
+- Accumulate and print the mean
+
+---
+
+### **Required Helper Functions Needed**
+
+(Assuming from your previous code)
+- `word-ngrams`
+- `ngram->index`
+- `average-vectors` (or sum, but average is common)
+- `extract-context`
+- `(assoc-ref alist key)`
+- `dot`
+- `vector-ref`
+- `(iota n)` → list `0 .. n-1`
+
+---
+
+### **Performance Note:**
+This computation is **slow for large vocabularies** due to the full softmax.  
+For small test sets or for debugging, it’s correct; for production-scale evaluation, use approximations or restrict to sampled vocabularies.
+
+---
+
+**Let me know if you need a complete minimal working example or helper code for the utility functions!**
+
+ChatGPT(gpt-4.1/General)> what's left?
+<shell-maker-end-of-prompt>
+You are **very close** to a full-featured CBOW + negative sampling + subword (fastText-style) model.  
+Here’s a breakdown of what remains (or could be improved) for a **complete, production-quality implementation**, and which features are at “MVP” (minimum viable product) stage now.
+
+---
+
+## 🟢 **What You Have:**
+- CBOW training (with negative sampling)
+- Subword n-gram composition for both context and center words
+- Integration of these in the training loop (model updates use n-gram embeddings)
+- Outer training loop: batching, epochs, evaluation, model checkpointing (stubs)
+- **Evaluation** that computes average log-likelihood using the full softmax over subword-composed output embeddings
+
+---
+
+## 🟨 **What’s Still Left / Can Be Improved:**
+
+### 1. **Implement All Missing Helpers (Matrix, Vector, Data)**
+- Core vector/matrix operations (add, scale, zeros, dot, etc.)
+- Efficient storage for n-gram embedding matrices (e.g. SRFI-4 arrays, flat arrays)
+- Proper random initialization
+- Lookup/update functions for n-gram embeddings, and for corpus pre-processing
+- Utility: iota, assoc-ref, etc.  
+  Some are stubbed; must be fully implemented.
+
+---
+
+### 2. **Corpus, Vocab, and ID Handling**
+- Proper text corpus → tokens → word <-> id mapping pipeline
+- Handling of OOV words during both train and eval  
+  (But fastText-style n-grams give you graceful fallback!)
+- Building and storing `id->word` vector or map from known words
+
+---
+
+### 3. **Efficient n-gram Hash Table / Embedding Table**
+- If your n-gram table is too small, collisions will hurt performance; too big and it’s wasteful.
+- hash function: must be fast and robust (string-hash or similar)
+- Embedding table indexing: collision handling (if needed) or just "additive sharing" between colliding n-grams
+
+---
+
+### 4. **Integration of Subsampling and Shuffling**
+- Subsampling of common words is present, but must be called within epoch loop (applied every epoch for stochasticity).
+- Option to **shuffle** the training corpus between epochs for robustness.
+
+---
+
+### 5. **Complete Model Saving/Loading**
+- Stubs exist; need code that serializes and loads model state (matrices, mappings, hyperparameters).
+- Allow model recovery and continued training or downstream use.
+
+---
+
+### 6. **Command Line Interface / Configuration**
+- Way to adjust window size, learning rate, n-gram parameters, embedding dimension, number of negatives, etc.
+- Logging and progress reporting.
+
+---
+
+### 7. **Testing, Logging, and Evaluation Improvements**
+- Add more sophisticated evaluation (e.g. analogy tasks, similarity search).
+- Optionally: implement faster softmax for eval (e.g. sampled or limited-vocab) if scaling up.
+
+---
+
+### 8. **Numerical Stability, Learning Rate Decay**
+- Ensure log-likelihood and gradients are robust (clipping, softmax care, etc.)
+- Optionally, learning-rate annealing or more sophisticated optimizer
+
+---
+
+### 9. **Documentation and Usability**
+- Comments, docstrings for all public functions
+- Example scripts to run, or at minimum, doc on how to pre-tokenize/train/evaluate
+
+---
+
+## 🟦 **Summary Table**
+
+| Area                              | Remaining Work?                    |
+|------------------------------------|------------------------------------|
+| Matrix/vector utilities            | Implement/stabilize all helpers    |
+| n-gram embedding table             | Tune size/hash, test performance   |
+| Full data pipeline                 | Implement tokenization/mapping     |
+| Subsampling in main training loop  | Integrate, test                    |
+| Model checkpoint save/load         | Implement                          |
+| User interface/config              | Optional but recommended           |
+| Logging/eval extensions            | Optional but helpful               |
+
+---
+
+## ✅ **MVP Completion**:
+
+The **core model logic is in place**.  
+Finalsteps to *functional, trainable program*:
+- Implement all helpers
+- Real corpus preprocessing
+- Model save/load
+- Integration of subsampling/shuffle
+
+---
+
+**Let me know what you’d like next: a helper implementation, a corpus-preprocessing demo, or an all-in-one final runnable sketch!**
+
+ChatGPT(gpt-4.1/General)> write a function that reads the corpus from a text file with one context per line, computes vocabularies and returns word ids ready for training
+<shell-maker-end-of-prompt>
+Certainly! Here’s how you can do it in MIT/GNU Scheme (or similar R5RS):  
+This function will:
+
+- Read a file where **each line is a training example**, i.e. a sequence of context+center words (e.g., space-separated).
+- Build a **vocabulary** (`word -> id`, `id -> word`) based on unique words found.
+- Produce a **vector of word-ids** for the entire flat corpus (concatenating all lines for CBOW, where windowing will happen later).
+- Return all three: the word->id mapping, id->word vector, and the word-id corpus vector.
+
+---
+
+## **Corpus Loading and Vocabification**
+
+```scheme
+;; Helper: split string into words by whitespace
+(define (split-words s)
+  (let loop ((i 0) (start 0) (lst '()))
+    (cond
+     ((= i (string-length s))
+      (if (= start i) (reverse lst)
+          (reverse (cons (substring s start i) lst))))
+     ((char-whitespace? (string-ref s i))
+      (if (= start i)
+          (loop (+ i 1) (+ i 1) lst)  ; skip consecutive whitespace
+          (loop (+ i 1) (+ i 1) (cons (substring s start i) lst))))
+     (else
+      (loop (+ i 1) start lst)))))
+```
+
+---
+
+```scheme
+;; Main corpus reading and vocab builder
+(define (read-corpus-and-build-vocab filename)
+  (let* ((in (open-input-file filename))
+         (lines (let loop ((lst '()))
+                  (let ((line (read-line in)))
+                    (if (eof-object? line)
+                        (reverse lst)
+                        (loop (cons line lst))))))
+         ;; Gather full list of all words in order
+         (all-words (apply append (map split-words lines)))
+         ;; Build vocabulary: word -> id
+         (word->id (let ((table (make-hash-table)))
+                     (let loop ((words all-words) (next-id 0))
+                       (cond
+                        ((null? words) table)
+                        ((hash-table-exists? table (car words))
+                         (loop (cdr words) next-id))
+                        (else
+                         (hash-table-put! table (car words) next-id)
+                         (loop (cdr words)(+ next-id 1)))))))
+         ;; List of unique words in vocab order of id
+         (vocab-size (hash-table-count word->id))
+        (id->word (make-vector vocab-size))
+         (fill-id->word!
+           (lambda ()
+             (for-each (lambda (word)
+                         (let ((id (hash-table-get word->id word)))
+                           (vector-set! id->word id word)))
+                       (hash-table-keys word->id)))))
+    (fill-id->word!)
+    ;; Now produce (vector-of-word-ids . word->id . id->word)
+    (let ((corpus-ids
+           (list->vector
+            (map (lambda (w) (hash-table-get word->id w)) all-words))))
+      (close-input-port in)
+      (list word->id id->word corpus-ids))))
+```
+
+---
+
+## **Usage Example:**
+
+Suppose `"my-corpus.txt"` looks like:
+```
+the quick brown fox
+jumps over the lazy dog
+```
+
+You run:
+```scheme
+(define result (read-corpus-and-build-vocab "my-corpus.txt"))
+(define word->id (list-ref result 0))
+(define id->word (list-ref result 1))
+(define corpus-ids (list-ref result 2))
+```
+
+---
+
+## **Explanation**
+
+- Reads each line, splits into words (tokenizes on whitespace).
+- Builds a word→id hash table assigning incremental ids.
+- Creates an `id->word` vector so `id->word[id]` is the string of word id.
+- Returns a **flat vector** of word-ids for the corpus, which is compatible with your CBOW training code.
+
+---
+
+## **Notes**
+
+- You may want to lowercase or normalize punctuation if your data is not pre-cleaned.
+- You might wish to add “UNK” for unknowns if you plan to apply on new data.
+- If the file is large, you can tokenize and count in a single pass to reduce list allocations.
+- **SRFI-69** or similar provides `make-hash-table`, `hash-table-get`, etc. (adapt for whatever hash table you have).
+
+---
+
+**If you’d like different behavior (e.g., one center word per line or explicit context/center split), let me know!**
+
+ChatGPT(gpt-4.1/General)> implement hash-table operations using mit scheme standard library (hash-table-set! etc)
+<shell-maker-end-of-prompt>
+MIT/GNU Scheme provides hash tables via its [hash-table library](https://www.gnu.org/software/mit-scheme/documentation/stable/mit-scheme-ref/Hash-Tables.html).  
+Here’s how to use the **standard hash table operations** in MIT Scheme:
+
+---
+
+## 🔑 **Creating and Using Hash Tables**
+
+### 1. **Creation**
+```scheme
+(define my-table (make-hash-table)) ; default eq? equality
+;; Or, for string keys (recommended for word->id):
+(define my-table (make-hash-table equal-hash equal?))
+```
+
+### 2. **Setting a value**
+```scheme
+(hash-table-set! my-table key value)
+```
+
+### 3. **Getting a value**
+```scheme
+(hash-table-ref my-table key [default])
+```
+- If `key` is not present, and `[default]` supplied, returns default.
+- Otherwise, signals an error.
+
+### 4. **Checking for existence**
+```scheme
+(hash-table-exists? my-table key)
+```
+
+### 5. **Removing a key**
+```scheme
+(hash-table-delete! my-table key)
+```
+
+### 6. **Size and Keys**
+```scheme
+(hash-table-size my-table)     ; Number of entries
+(hash-table-keys my-table)     ; Returns list of keys
+(hash-table-values my-table)   ; Returns list of values
+```
+
+### 7. **Iterating**
+```scheme
+(hash-table-for-each my-table
+  (lambda (key value)
+    (display key) (display " -> ") (display value) (newline)))
+```
+
+---
+
+## ✨ **Example: String-to-ID and ID-to-String Vocab Tables**
+
+```scheme
+;; Use 'equal?' for string keys!
+(define word->id (make-hash-table equal-hash equal?))
+(define id->word (make-hash-table))
+
+;; Inserting:
+(hash-table-set! word->id "hello" 0)
+(hash-table-set! id->word 0 "hello")
+
+;; Access:
+(hash-table-ref word->id "hello")        ; => 0
+(hash-table-ref id->word 0)              ; => "hello"
+
+;; Check:
+(hash-table-exists? word->id "dog")      ; => #f
+
+;; All keys:
+(hash-table-keys word->id)               ; => list of strings
+```
+
+---
+
+## 🟦 **Integration Example in Your Pipeline**
+
+```scheme
+;;; Build vocabulary from token sequence word list
+(define (build-vocab-ht all-words)
+  (let ((word->id (make-hash-table equal-hash equal?))
+        (id->word (make-hash-table)))
+    (let loop ((words all-words) (next-id 0))
+      (cond
+        ((null? words) (values word->id id->word next-id))
+        ((hash-table-exists? word->id (car words))
+         (loop (cdr words) next-id))
+        (else
+          (hash-table-set! word->id (car words) next-id)
+          (hash-table-set! id->word next-id (car words))
+          (loop (cdr words) (+ next-id 1)))))))
+```
+
+---
+
+## 🚩 **SUMMARY TABLE**
+
+| Operation                 | Syntax                                  |
+|---------------------------|-----------------------------------------|
+| Create Table (eq?)        | `(make-hash-table)`                     |
+| Create Table (equal?)     | `(make-hash-table equal-hash equal?)`   |
+| Set Value                 | `(hash-table-set! tbl key val)`         |
+| Get Value                 | `(hash-table-ref tbl key [default])`    |
+| Check Existence           | `(hash-table-exists? tbl key)`          |
+| Delete Key                | `(hash-table-delete! tbl key)`          |
+| Keys/Values               | `(hash-table-keys tbl)` / ...           |
+| Size                      | `(hash-table-size tbl)`                 |
+
+---
+
+**Let me know if you want a full, self-contained word2id/id2word corpus processing example!**
+
+ChatGPT(gpt-4.1/General)> rewrite read-corpus-and-build-vocab
+<shell-maker-end-of-prompt>
+Absolutely! Here’s a revised `read-corpus-and-build-vocab` function using the standard **MIT Scheme hash-table API** and building both a `word->id` and an `id->word` mapping, plus the vectorized corpus. Each line is split into words, and all words are assigned consecutive integer IDs.
+
+---
+
+```scheme
+;; Helper: split a string into words (space-separated)
+(define (split-words s)
+  (let loop ((i 0) (start 0) (lst '()))
+    (let ((n (string-length s)))
+      (cond
+        ((= i n)
+         (if (= start i) (reverse lst)
+             (reverse (cons (substring s start i) lst))))
+        ((char-whitespace? (string-ref s i))
+         (if (= start i)
+             (loop (+ i 1) (+ i 1) lst) ; skip extra whitespace
+             (loop (+ i 1) (+ i 1) (cons (substring s start i) lst))))
+        (else
+         (loop (+ i 1) start lst))))))
+
+;; Main function
+(define (read-corpus-and-build-vocab filename)
+  (let* ((word->id (make-hash-table equal-hash equal?))
+         (id->word (make-hash-table))
+         (words '())
+         (next-id 0))
+    ;; Read file, build list of words, and vocab maps
+    (call-with-input-file filename
+      (lambda (in)
+        (do ((line (read-line in) (read-line in)))
+            ((eof-object? line))
+          (let ((line-words (split-words line)))
+            (for-each
+              (lambda (w)
+                (unless (hash-table-exists? word->id w)
+                  (hash-table-set! word->id w next-id)
+                  (hash-table-set! id->word next-id w)
+                  (set! next-id (+ next-id 1))))
+              line-words)
+            (set! words (append words line-words))))))
+    ;; Build word-id vector for entire corpus
+    (let ((corpus-ids
+            (list->vector
+              (map (lambda (w) (hash-table-ref word->id w)) words)))
+          (vocab-size next-id)
+          (id->word-vector (let ((vec (make-vector next-id)))
+                             (do ((i 0 (+ i 1)))
+                                 ((= i next-id) vec)
+                               (vector-set! vec i (hash-table-ref id->word i))))))
+      (list word->id id->word-vector corpus-ids))))
+```
+
+---
+
+### **Usage Example**
+Given a text file `corpus.txt` such as:
+```
+the quick brown fox
+jumps over the lazy dog
+```
+You can run:
+```scheme
+(define (main)
+  (let ((result (read-corpus-and-build-vocab "corpus.txt")))
+    (define word->id (list-ref result 0))
+    (define id->word (list-ref result 1))
+    (define corpus-ids (list-ref result 2))
+    ;; Now you can print or use these as desired
+    (display word->id) (newline)
+    (display id->word) (newline)
+    (display corpus-ids) (newline)))
+```
+
+---
+
+### **Highlights**
+- Uses MIT Scheme’s standard `hash-table-set!`, `hash-table-ref`, `hash-table-exists?` APIs.
+- Returns three items:  
+  1. a hash table mapping words ⇨ IDs (`word->id`)  
+  2. a vector mapping IDs ⇨ words (`id->word-vector`)  
+  3. a vector of word IDs (`corpus-ids`)  
+- Cleanly processes and vectorizes the entire corpus for your CBOW/data pipeline.
+
+---
+
+**Let me know if you need batching helpers, UNK handling, or special-case context/center splitting!**
+
+ChatGPT(gpt-4.1/General)> ;The object #[compiled-procedure 2 ("equals" #x4) #x14 #x1013308ac], passed as an argument to make-hash-table-type*, is not in the correct range.
+<shell-maker-end-of-prompt>
+Great catch! This error (`The object #[compiled-procedure ...], passed as an argument to make-hash-table-type*, is not in the correct range.`) means your call to  
+```scheme
+(make-hash-table equal-hash equal?)
+```
+or similar, is not correct for MIT Scheme.
+
+---
+
+## 🚨 **Explanation**
+
+MIT/GNU Scheme’s **`make-hash-table`** expects a *hash-table-type* argument, _not_ a hash/equality function pair as in some other Schemes like SRFI-69 or Racket.
+
+**Default usage:**  
+- `(make-hash-table)` — creates a hash table with `eq?` equality.
+- To use different key types (like strings with `equal?`), you must use one of the predefined types.
+
+### Supported hash table types in MIT Scheme:
+
+- `make-eq-hash-table`
+- `make-eqv-hash-table`
+- `make-equal-hash-table`
+- `make-string-hash-table`
+
+**For string keys:**  
+Use `(make-equal-hash-table)` or `(make-string-hash-table)`.
+
+---
+
+## 🟢 **How To Fix** (for string keys)
+
+Change these lines:
+```scheme
+(define word->id (make-hash-table equal-hash equal?))
+```
+to:
+```scheme
+(define word->id (make-string-hash-table))
+```
+_or, if you want the more general equal? keys:_
+```scheme
+(define word->id (make-equal-hash-table))
+```
+But for vocab, `(make-string-hash-table)` is preferred and faster, since all keys are strings.
+
+---
+
+### **For id->word** (integer keys):  
+You can just use the default:
+```scheme
+(define id->word (make-hash-table))
+```
+Or, if you want,`(make-eq-hash-table)` (but both will work for small integer keys).
+
+---
+
+## 🛠️ **Example Patch:**
+
+```scheme
+(define (read-corpus-and-build-vocab filename)
+  (let* ((word->id (make-string-hash-table)) ; Use specialized string-table for vocab
+         (id->word (make-hash-table))
+         (words '())
+         (next-id 0))
+  ...
+  ))
+```
+
+---
+
+## 📝 **Summary Table**
+
+| Use case             | Hash table constructor     |
+|----------------------|------------------------------------|
+| string -> id         | `(make-string-hash-table)`          |
+| int (id) -> string   | `(make-hash-table)` or `(make-eq-hash-table)`         |
+
+---
+
+**Let me know if you need a fully updated function or another Scheme’s hash API!**
+
+ChatGPT(gpt-4.1/General)> what's left?
+<shell-maker-end-of-prompt>
+You are **very close to a truly complete, trainable, and usable CBOW/fastText-style word-embedding system** in MIT/GNU Scheme. Here’s a summary of what’s left to a) get things working end-to-end, and b) make it production-grade or robust.
+
+---
+
+## 🟢 **Features You Seem to Have:**
+
+- Text corpus loading, tokenization, vocabulary construction, and mapping
+- CBOW with subword n-gram composition (fastText logic)
+- Negative sampling (for training)
+- Outer epochs-and-batches training loop, evaluation, and stubbed checkpointing
+- Evaluation with full softmax and log-likelihood over the vocab
+- Helper code for hash tables in MIT Scheme
+
+---
+
+## 🟡 **What’s Left / To Check / To Fix:**
+
+### 🚧 **Minimal for a working training run:**
+
+1. **Robust, Finished Vector/Matrix Operations**
+    - Make sure `vector-add`, `vector-scale`, `make-zero-vector`, `dot`, etc. are actually implemented and handle n-dimensional vectors (Scheme version, no stubs).
+    - Handle numerical stability (avoid vector out-of-bounds, etc.).
+
+2. **Random Initialization**
+    - Make sure your embedding matrices are filled with small random numbers.
+
+3. **Subsampling/Windowing**
+    - Corpus word subsampling should be triggered inside the training loop if you want that (not just as a helper).
+
+4. **All Utility Functions Are in Place**
+    - `average-vectors` should handle empty lists gracefully.
+    - All your lookup functions for n-gram indices and word indices are working and not stubbed.
+
+5. **Actual Model Checkpointing/Serialization**
+    - Your stub for `save-model!` should be replaced (at least, for example, with a binary dump of the vectors/embeddings and mappings, e.g. via `(write ...)` to a file).
+
+6. **Actual Training Data Batch Handling**
+    - Make sure your batching/training loop doesn’t jump over window context at the start/end.
+    - Confirm training loop randomizes corpus order (optional for first run).
+
+7. **Learning Rate Decay (optional for MVP)**
+    - Consider a schedule for the learning rate if you intend long training.
+
+8. **OOV Handling at Inference Time**
+    - It’s mostly solved by subwords, but add a note/error if none of the n-grams are in range for a word.
+
+---
+
+### 🟡 **Recommended for usability/production:**
+
+- **Command-line or config-file argument parsing**
+- **Progress/metrics logging**
+- **More thorough reporting in evaluation (similarity test, analogy, etc.)**
+- **Cleaner handling of loading existing models**
+- **Graceful failure if file, index, or hash miss arises**
+
+---
+
+### 🚩 **Final Test Steps Before Training:**
+
+- Try on a tiny corpus and check:  
+  - Training completes, no crashes
+  - Loss goes down
+  - Embeddings can be saved/loaded and inspected
+  - Evaluation runs and average log-likelihood is reasonable
+
+---
+
+## 🟦 **Summary Table**
+
+| Area                        | Completed? | Remaining Work/Checkpoints               |
+|-----------------------------|:----------:|------------------------------------------|
+| Vector/matrix ops           |   ❓       | Implement/verify everything used         |
+| Hash tables (MIT Scheme)    |    ✅      | Correct API now in use                   |
+| Random init                 |   ❓       | Make sure it is not all zeros            |
+| Subsampling and windowing   |   ❓       | Integrated where appropriate             |
+| Model checkpointing         |   ❓       | Implement save/load, not just stubs      |
+| Training loop logic         |    ✅      | Batch/epoch/iteration logic present      |
+| Data batching               |   ❓       | Confirm no missing or partial batches    |
+| Eval (perplexity, loglike)  |    ✅      | Present for full softmax                 |
+| OOV at inference            |   ❓       | Subword provides fallback, confirm logic |
+
+---
+
+## 🟢 **BOTTOM LINE:**  
+With  
+- Working vector/matrix math  
+- Finished init/checkpoint routines  
+- Confirmed utility helpers
+
+**...the system should be able to train embeddings and be extended for practical work.**
+
+---
+
+**If you want:**  
+- Ready-to-use vector/matrix helper implementations  
+- Example minimal corpus and full training session  
+- Completed model checkpoint/read-from-disk code  
+**...just ask!**
+
+ChatGPT(gpt-4.1/General)> 
